@@ -3,6 +3,16 @@ import { ChatOpenAI } from "@langchain/openai";
 import { QASchema } from "../types/qa";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  // Handle preflight OPTIONS request
+  if (req.method === "OPTIONS") {
+    res.status(200).end();
+    return;
+  }
+
   // Validate request method
   console.log("Received request", { method: req.method });
   if (req.method !== "POST") {
@@ -12,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const { qaData, userMessage, attemptCount = 0 } = req.body || {};
-  
+
   // Validate QA data
   try {
     QASchema.parse(qaData);
@@ -79,16 +89,18 @@ Réponds maintenant au message de l'utilisateur.
     console.log("Invoking LLM for interactive chat", {
       question: qaData.question,
       attemptCount,
-      userMessagePreview: userMessage.slice(0, 100)
+      userMessagePreview: userMessage.slice(0, 100),
     });
 
-    const response = await llm.invoke(`${systemPrompt}\n\nMessage de l'utilisateur: ${userMessage}`);
-    
+    const response = await llm.invoke(
+      `${systemPrompt}\n\nMessage de l'utilisateur: ${userMessage}`
+    );
+
     console.log("LLM response received for chat");
-    res.status(200).json({ 
+    res.status(200).json({
       response: response.content,
       attemptCount: attemptCount + 1,
-      question: qaData.question
+      question: qaData.question,
     });
   } catch (error) {
     console.error("Error during LLM invocation", error);
