@@ -41,7 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Configure LLM
   console.log("Configuring LLM");
   const llm = new ChatOpenAI({
-    model: "gpt-5-nano",
+    model: "gpt-4.1-nano",
     apiKey: process.env.OPENAI_API_KEY,
   });
 
@@ -63,16 +63,16 @@ Tu es un assistant IA conçu pour aider l'utilisateur à trouver la réponse à 
 
 2. **Si l'utilisateur a déjà fait 3 tentatives incorrectes** :
    - Révèle automatiquement la réponse correcte : "${qaData.answer}"
-   - Explique pourquoi c'est la bonne réponse en te basant sur le contexte
+   - Explique très brièvement pourquoi c'est la bonne réponse en te basant sur le contexte
 
 3. **Si l'utilisateur propose une réponse** :
    - Évalue si sa réponse est correcte ou proche de la réponse attendue
    - Si c'est correct : félicite-le et confirme la réponse
-   - Si c'est incorrect : guide-le avec des indices sans révéler la réponse complète
+   - Si c'est incorrect : guide-le brièvement avec des indices SANS RÉVÉLER LA RÉPONSE
    - Encourage-le à essayer encore (s'il lui reste des tentatives)
 
 4. **Si l'utilisateur pose des questions ou demande de l'aide** :
-   - Donne des indices utiles sans révéler directement la réponse
+   - Donne des indices utiles SANS RÉVÉLER LA RÉPONSE
    - Guide-le vers la bonne direction
    - Utilise le contexte pour donner des pistes
 
@@ -81,6 +81,7 @@ Tu es un assistant IA conçu pour aider l'utilisateur à trouver la réponse à 
 - Parle en français (mais utilise les passages/mots originaux en langue étrangère si nécessaire)
 - Adapte ton niveau d'aide selon le nombre de tentatives
 - Reste dans le rôle d'un tuteur bienveillant
+- Réponds de manière concise et claire
 
 Réponds maintenant au message de l'utilisateur.
 `;
