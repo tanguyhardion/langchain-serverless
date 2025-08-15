@@ -2,10 +2,11 @@ import { VercelRequest, VercelResponse } from "@vercel/node";
 import { ChatOpenAI } from "@langchain/openai";
 import { z } from "zod";
 
-// Define QA schema
+// Define QA schema with context
 const QASchema = z.object({
   question: z.string(),
   answer: z.string(),
+  context: z.string(), // The relevant paragraph/context for the Q&A
 });
 const QAListObjectSchema = z.object({
   items: z.array(QASchema),
@@ -33,20 +34,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     apiKey: process.env.OPENAI_API_KEY,
   });
 
-  // System prompt to enforce Q&A list format
-  const systemPrompt = `Tu es un assistant IA qui répond TOUJOURS sous forme de questions-réponses.\nDonne 10 paires question-réponse sur l'article fourni dans l'article ci-dessous, pour tester la compréhension de l'utilisateur.\nInclue quelques questions (maximum 3, mais pas forcément 3) sur la langue de l'article si elle n'est pas en français (par exemple, demande la signification de mots ou de phrases difficiles si l'article est en russe).\nToutes les questions et réponses doivent être en FRANÇAIS.\nFormatte la sortie comme une liste structurée de questions et leurs réponses.\nExemples :\n- Si l'article est sur Paris, crée des Q&R sur le contenu de l'article comme "Qu'est-ce que Paris ?" et "Pourquoi Paris est-elle célèbre ?" seulement si l'article contient ces informations bien entendu.\n- Si l'article est dans une langue étrangère, pose toujours les questions en français, mais ajoute des questions sur des mots ou phrases difficiles (dans la langue étrangère) présents dans le texte.`;
+  // System prompt to enforce Q&A list format and require context
+  const systemPrompt = `
+Tu es un assistant IA spécialisé dans la création d'exercices de compréhension. Ton rôle est de transformer un article fourni en une série de questions-réponses pour tester la compréhension d'un utilisateur.
+
+**Instructions :**
+
+1. L'article fourni sera dans une langue étrangère (pas en français).
+2. Crée **10 paires question-réponse-contexte** basées sur l'article.
+3. Pour chaque paire :
+
+   * Fournis **la question en français**.
+   * Fournis **la réponse en français**.
+   * Fournis **le passage exact de l'article qui justifie la réponse**, dans la langue d'origine.
+4. Inclue **1 à 3 questions sur la langue de l'article** : par exemple, la signification de mots ou phrases difficiles présents dans le texte, ou le temps/déclinaison de certains mots.
+5. Ne pose des questions que sur des informations réellement présentes dans l'article.
+6. Les questions sur la langue doivent mentionner le mot ou la phrase cible dans la langue originale et expliquer sa signification en français.
+7. Les passages cités doivent toujours rester dans la langue originale de l'article.
+
+**Exemples :**
+
+* Si l'article parle de Paris : crée des questions comme "Qu'est-ce que Paris ?" ou "Pourquoi Paris est-elle célèbre ?" uniquement si ces informations apparaissent dans l'article, avec le passage original comme contexte.
+* Si l'article est dans une langue étrangère : toutes les questions sont en français, mais inclue 1 à 3 questions sur des mots ou phrases difficiles, avec le passage original correspondant.
+`;
 
   // Combine system prompt and user prompt
   const fullPrompt = `${systemPrompt}\n\nArticle: ${articleInput}`;
-  console.log("Invoking LLM with prompt");
 
   // Use withStructuredOutput to get structured QA list as an object
-  let qaListObject: { items: { question: string; answer: string }[] };
+  let qaListObject: {
+    items: { question: string; answer: string; context: string }[];
+  };
 
   try {
+    console.log(
+      `Invoking LLM with prompt and article: ${articleInput.slice(0, 100)}...`
+    );
     qaListObject = await llm
       .withStructuredOutput(QAListObjectSchema)
       .invoke(fullPrompt);
+			
     console.log("LLM response received", {
       qaCount: qaListObject?.items?.length,
     });
