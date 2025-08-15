@@ -90,14 +90,14 @@ Réponds maintenant au message de l'utilisateur.
     console.log("Invoking LLM for interactive chat", {
       question: qaData.question,
       attemptCount,
-      userMessagePreview: userMessage.slice(0, 100),
+      userMessage: userMessage,
     });
 
     const response = await llm.invoke(
       `${systemPrompt}\n\nMessage de l'utilisateur: ${userMessage}`
     );
 
-    console.log("LLM response received for chat");
+    console.log(`LLM response received for chat: ${response.content}`);
     res.status(200).json({
       response: response.content,
       attemptCount: attemptCount + 1,

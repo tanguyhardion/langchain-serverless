@@ -70,7 +70,7 @@ Tu es un assistant IA spécialisé dans la création d'exercices de compréhensi
 
   try {
     console.log(
-      `Invoking LLM with prompt and article: ${articleInput.slice(0, 100)}...`
+      `Invoking LLM with prompt and article: ${articleInput.slice(0, 500)}...`
     );
     qaListObject = await llm
       .withStructuredOutput(QAListObjectSchema)
