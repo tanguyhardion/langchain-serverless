@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "@langchain/openai": "^0.6.7",
+    "langchain": "^0.3.30",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^17.0.42",
+    "@vercel/node": "^2.9.6",
+    "typescript": "^4.7.3"
+  }
+}
