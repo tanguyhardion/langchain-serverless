@@ -5,7 +5,7 @@ import { QASchema, QAListObjectSchema } from "../types/qa";
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS: Allow only specific domains
   const allowedOrigins = [
-    "localhost:3000",
+    "http://localhost:3000",
   ];
   const origin = req.headers.origin;
   if (origin && allowedOrigins.includes(origin)) {

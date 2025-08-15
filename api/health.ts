@@ -2,7 +2,7 @@
 export default function handler(req, res) {
     // CORS: Allow only specific domains
     const allowedOrigins = [
-      "localhost:3000",
+      "http://localhost:3000",
     ];
     const origin = req.headers.origin;
     if (origin && allowedOrigins.includes(origin)) {
