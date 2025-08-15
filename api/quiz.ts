@@ -3,18 +3,6 @@ import { ChatOpenAI } from "@langchain/openai";
 import { QASchema, QAListObjectSchema } from "../types/qa";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS: Allow only specific domains
-  const allowedOrigins = [
-    "http://localhost:3000",
-  ];
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
-  } else {
-    res.status(403).json({ error: "Forbidden: Origin not allowed" });
-    return;
-  }
   // Validate request method
   console.log("Received request", { method: req.method });
   if (req.method !== "POST") {
