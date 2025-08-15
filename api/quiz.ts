@@ -1,18 +1,9 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import { ChatOpenAI } from "@langchain/openai";
-import { z } from "zod";
-
-// Define QA schema with context
-const QASchema = z.object({
-  question: z.string(),
-  answer: z.string(),
-  context: z.string(), // The relevant paragraph/context for the Q&A
-});
-const QAListObjectSchema = z.object({
-  items: z.array(QASchema),
-});
+import { QASchema, QAListObjectSchema } from "../types/qa";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Validate request method
   console.log("Received request", { method: req.method });
   if (req.method !== "POST") {
     console.log("Rejected non-POST request");
@@ -20,6 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
+  // Validate request body
   const { articleInput } = req.body || {};
   if (!articleInput || typeof articleInput !== "string") {
     console.log("Invalid or missing articleInput", { articleInput });
@@ -73,7 +65,7 @@ Tu es un assistant IA spécialisé dans la création d'exercices de compréhensi
     qaListObject = await llm
       .withStructuredOutput(QAListObjectSchema)
       .invoke(fullPrompt);
-			
+
     console.log("LLM response received", {
       qaCount: qaListObject?.items?.length,
     });
