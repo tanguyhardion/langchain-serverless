@@ -12,18 +12,22 @@ const QAListObjectSchema = z.object({
 });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  console.log("Received request", { method: req.method });
   if (req.method !== "POST") {
+    console.log("Rejected non-POST request");
     res.status(405).json({ error: "Method not allowed" });
     return;
   }
 
   const { articleInput } = req.body || {};
   if (!articleInput || typeof articleInput !== "string") {
+    console.log("Invalid or missing articleInput", { articleInput });
     res.status(400).json({ error: "Missing or invalid article input" });
     return;
   }
 
   // Configure LLM
+  console.log("Configuring LLM");
   const llm = new ChatOpenAI({
     model: "gpt-5-nano",
     apiKey: process.env.OPENAI_API_KEY,
@@ -34,11 +38,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Combine system prompt and user prompt
   const fullPrompt = `${systemPrompt}\n\nArticle: ${articleInput}`;
+  console.log("Invoking LLM with prompt");
 
   // Use withStructuredOutput to get structured QA list as an object
-  const qaListObject = await llm
-    .withStructuredOutput(QAListObjectSchema)
-    .invoke(fullPrompt);
+  let qaListObject: { items: { question: string; answer: string }[] };
 
-  res.status(200).json(qaListObject);
+  try {
+    qaListObject = await llm
+      .withStructuredOutput(QAListObjectSchema)
+      .invoke(fullPrompt);
+    console.log("LLM response received", {
+      qaCount: qaListObject?.items?.length,
+    });
+    res.status(200).json(qaListObject);
+  } catch (error) {
+    console.error("Error during LLM invocation", error);
+    res.status(500).json({ error: "Failed to generate Q&A list" });
+  }
 }
