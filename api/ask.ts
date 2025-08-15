@@ -7,7 +7,9 @@ const QASchema = z.object({
   question: z.string(),
   answer: z.string(),
 });
-const QAListSchema = z.array(QASchema);
+const QAListObjectSchema = z.object({
+  items: z.array(QASchema),
+});
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -15,9 +17,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const { prompt } = req.body || {};
-  if (!prompt || typeof prompt !== "string") {
-    res.status(400).json({ error: "Missing or invalid prompt" });
+  const { articleInput } = req.body || {};
+  if (!articleInput || typeof articleInput !== "string") {
+    res.status(400).json({ error: "Missing or invalid article input" });
     return;
   }
 
@@ -27,8 +29,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     apiKey: process.env.OPENAI_API_KEY,
   });
 
-  // Use withStructuredOutput to get structured QA list
-  const qaList = await llm.withStructuredOutput(QAListSchema).invoke(prompt);
+  // System prompt to enforce Q&A list format
+  const systemPrompt = `Tu es un assistant IA qui répond TOUJOURS sous forme de questions-réponses.\nDonne 10 paires question-réponse sur l'article fourni dans l'article ci-dessous, pour tester la compréhension de l'utilisateur.\nInclue quelques questions (maximum 3, mais pas forcément 3) sur la langue de l'article si elle n'est pas en français (par exemple, demande la signification de mots ou de phrases difficiles si l'article est en russe).\nToutes les questions et réponses doivent être en FRANÇAIS.\nFormatte la sortie comme une liste structurée de questions et leurs réponses.\nExemples :\n- Si l'article est sur Paris, crée des Q&R sur le contenu de l'article comme "Qu'est-ce que Paris ?" et "Pourquoi Paris est-elle célèbre ?" seulement si l'article contient ces informations bien entendu.\n- Si l'article est dans une langue étrangère, pose toujours les questions en français, mais ajoute des questions sur des mots ou phrases difficiles (dans la langue étrangère) présents dans le texte.`;
 
-  res.status(200).json(qaList);
+  // Combine system prompt and user prompt
+  const fullPrompt = `${systemPrompt}\n\nArticle: ${articleInput}`;
+
+  // Use withStructuredOutput to get structured QA list as an object
+  const qaListObject = await llm
+    .withStructuredOutput(QAListObjectSchema)
+    .invoke(fullPrompt);
+
+  res.status(200).json(qaListObject);
 }
