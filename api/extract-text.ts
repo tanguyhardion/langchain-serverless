@@ -1,52 +1,55 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import fetch from "node-fetch";
 import * as cheerio from "cheerio";
+import { 
+  ALLOWED_ORIGINS,
+  CORS_HEADERS,
+  ALLOWED_METHODS,
+  HTTP_STATUS,
+  ERROR_MESSAGES 
+} from "../consts";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
-  const allowedOrigins = [
-    "https://tanguyhardion.github.io",
-    "http://localhost:3000",
-  ];
   const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader(CORS_HEADERS.ORIGIN, origin);
   } else {
-    res.setHeader("Access-Control-Allow-Origin", "none");
+    res.setHeader(CORS_HEADERS.ORIGIN, "none");
   }
   // Handle preflight OPTIONS request
-  if (req.method === "OPTIONS") {
-    res.status(200).end();
+  if (req.method === ALLOWED_METHODS.OPTIONS) {
+    res.status(HTTP_STATUS.OK).end();
     return;
   }
 
   // Validate request method
-  if (req.method !== "POST") {
-    res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== ALLOWED_METHODS.POST) {
+    res.status(HTTP_STATUS.METHOD_NOT_ALLOWED).json({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED });
     return;
   }
 
   // Validate request body
   const { url } = req.body || {};
   if (!url || typeof url !== "string") {
-    res.status(400).json({ error: "Missing or invalid url" });
+    res.status(HTTP_STATUS.BAD_REQUEST).json({ error: ERROR_MESSAGES.MISSING_URL });
     return;
   }
 
   try {
     const response = await fetch(url);
     if (!response.ok) {
-      res.status(400).json({ error: "Failed to fetch the URL" });
+      res.status(HTTP_STATUS.BAD_REQUEST).json({ error: ERROR_MESSAGES.FAILED_TO_FETCH });
       return;
     }
     const html = await response.text();
     const $ = cheerio.load(html);
     // Extract main text content (simple approach)
     const text = $("body").text().replace(/\s+/g, " ").trim();
-    res.status(200).json({ text });
+    res.status(HTTP_STATUS.OK).json({ text });
   } catch (error) {
     res
-      .status(500)
-      .json({ error: "Error extracting text", details: String(error) });
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .json({ error: ERROR_MESSAGES.EXTRACT_TEXT_ERROR, details: String(error) });
   }
 }

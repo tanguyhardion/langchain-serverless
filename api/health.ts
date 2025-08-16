@@ -1,26 +1,30 @@
+import { 
+  ALLOWED_ORIGINS,
+  CORS_HEADERS,
+  ALLOWED_METHODS,
+  HTTP_STATUS,
+  ERROR_MESSAGES 
+} from "../consts";
+
 // Health check endpoint for serverless deployment
 export default function handler(req, res) {
   // CORS headers
-  const allowedOrigins = [
-    "https://tanguyhardion.github.io",
-    "http://localhost:3000",
-  ];
   const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader(CORS_HEADERS.ORIGIN, origin);
   } else {
-    res.setHeader("Access-Control-Allow-Origin", "none");
+    res.setHeader(CORS_HEADERS.ORIGIN, "none");
   }
   // Handle preflight OPTIONS request
-  if (req.method === "OPTIONS") {
-    res.status(200).end();
+  if (req.method === ALLOWED_METHODS.OPTIONS) {
+    res.status(HTTP_STATUS.OK).end();
     return;
   }
 
   // Validate request method
-  if (req.method === "GET") {
-    res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+  if (req.method === ALLOWED_METHODS.GET) {
+    res.status(HTTP_STATUS.OK).json({ status: "ok", timestamp: new Date().toISOString() });
   } else {
-    res.status(405).json({ error: "Method Not Allowed" });
+    res.status(HTTP_STATUS.METHOD_NOT_ALLOWED).json({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED });
   }
 }

@@ -1,32 +1,36 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import { QAListObjectSchema } from "../types/qa";
 import { getLLM } from "../utils/llm";
+import { 
+  ALLOWED_ORIGINS,
+  CORS_HEADERS,
+  ALLOWED_METHODS,
+  ALLOWED_REQUEST_HEADERS,
+  HTTP_STATUS,
+  ERROR_MESSAGES 
+} from "../consts";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
-  const allowedOrigins = [
-    "https://tanguyhardion.github.io",
-    "http://localhost:3000",
-  ];
   const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader(CORS_HEADERS.ORIGIN, origin);
   } else {
-    res.setHeader("Access-Control-Allow-Origin", "none");
+    res.setHeader(CORS_HEADERS.ORIGIN, "none");
   }
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader(CORS_HEADERS.METHODS, "POST, OPTIONS");
+  res.setHeader(CORS_HEADERS.HEADERS, ALLOWED_REQUEST_HEADERS);
   // Handle preflight OPTIONS request
-  if (req.method === "OPTIONS") {
-    res.status(200).end();
+  if (req.method === ALLOWED_METHODS.OPTIONS) {
+    res.status(HTTP_STATUS.OK).end();
     return;
   }
 
   // Validate request method
   console.log("Received request", { method: req.method });
-  if (req.method !== "POST") {
+  if (req.method !== ALLOWED_METHODS.POST) {
     console.log("Rejected non-POST request");
-    res.status(405).json({ error: "Method not allowed" });
+    res.status(HTTP_STATUS.METHOD_NOT_ALLOWED).json({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED });
     return;
   }
 
@@ -34,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { articleInput } = req.body || {};
   if (!articleInput || typeof articleInput !== "string") {
     console.log("Invalid or missing articleInput", { articleInput });
-    res.status(400).json({ error: "Missing or invalid article input" });
+    res.status(HTTP_STATUS.BAD_REQUEST).json({ error: ERROR_MESSAGES.MISSING_ARTICLE_INPUT });
     return;
   }
 
@@ -85,9 +89,9 @@ Tu es un assistant IA spécialisé dans la création d'exercices de compréhensi
     console.log("LLM response received", {
       qaCount: qaListObject?.items?.length,
     });
-    res.status(200).json(qaListObject);
+    res.status(HTTP_STATUS.OK).json(qaListObject);
   } catch (error) {
     console.error("Error during LLM invocation", error);
-    res.status(500).json({ error: "Failed to generate Q&A list" });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: ERROR_MESSAGES.FAILED_QA_GENERATION });
   }
 }

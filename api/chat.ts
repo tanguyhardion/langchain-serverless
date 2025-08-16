@@ -1,32 +1,108 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
-import { QASchema } from "../types/qa";
+import { QASchema, QASchemaType } from "../types/qa";
 import { getLLM } from "../utils/llm";
+import { 
+  MAX_ATTEMPTS,
+  ALLOWED_ORIGINS,
+  CORS_HEADERS,
+  ALLOWED_METHODS,
+  ALLOWED_REQUEST_HEADERS,
+  HTTP_STATUS,
+  ERROR_MESSAGES 
+} from "../consts";
+
+/**
+ * Builds the context information section for the system prompt
+ */
+function buildContextSection(qaData: QASchemaType, attemptCount: number): string {
+  return `**Contexte :**
+- Question : "${qaData.question}"
+- Réponse correcte : "${qaData.answer}"
+- Contexte de la réponse : "${qaData.context}"
+- Nombre de tentatives de l'utilisateur : ${attemptCount}/${MAX_ATTEMPTS}`;
+}
+
+/**
+ * Builds the coaching mode prompt (for attempts < 3)
+ * In this mode, the AI guides the user without revealing the answer
+ */
+function buildCoachingModePrompt(baseContext: string): string {
+  return `Tu es un assistant IA de coaching pédagogique pour aider l'utilisateur à trouver la réponse à UNE question spécifique. Tu ne dois pas répondre à d'autres requêtes hors sujet.
+
+${baseContext}
+
+**Mode actuel (tentatives < ${MAX_ATTEMPTS}) :**
+1. Ne RÉVÈLE JAMAIS la réponse, même si l'utilisateur la demande explicitement.
+2. Si l'utilisateur insiste pour avoir la réponse, dis-lui simplement qu'il peut cliquer sur le bouton "Afficher la réponse" situé en dessous.
+3. Donne des indices progressifs, pose des questions guidées et aide à raisonner, sans donner la réponse.
+4. Si l'utilisateur propose une réponse :
+   - Si elle est correcte, félicite et confirme.
+   - Sinon, explique brièvement ce qui cloche et redirige avec des indices sans révéler la solution.
+5. Reste strictement focalisé sur la question et son contexte.
+
+**Style :**
+- Encourageant, concis, clair, en français.
+- Jamais de hors-sujet, pas de digression.`;
+}
+
+/**
+ * Builds the explanatory mode prompt (for attempts >= 3)
+ * In this mode, the AI can reveal and explain the correct answer
+ */
+function buildExplanatoryModePrompt(baseContext: string, answer: string): string {
+  return `Tu es maintenant un assistant IA explicatif pour aider l'utilisateur à COMPRENDRE la réponse, la question et le contexte.
+
+${baseContext}
+
+**Mode actuel (≥ ${MAX_ATTEMPTS} tentatives) :**
+1. Tu peux révéler la réponse correcte : "${answer}".
+2. Explique pourquoi c'est la bonne réponse en t'appuyant sur le contexte fourni.
+3. Propose une explication structurée (raisonnement, repérage d'indices dans le contexte, pièges fréquents).
+4. Réponds aux questions de clarification et donne des exemples courts si utile.
+5. Reste centré sur cette question uniquement (pas de hors-sujet).
+
+**Style :**
+- Pédagogique, clair, concis, en français.`;
+}
+
+/**
+ * Builds the complete system prompt based on QA data and attempt count
+ * 
+ * The system switches between two modes:
+ * - Coaching mode (< 3 attempts): Guides user without revealing answer
+ * - Explanatory mode (≥ 3 attempts): Can reveal and explain the correct answer
+ */
+function buildSystemPrompt(qaData: QASchemaType, attemptCount: number): string {
+  const baseContext = buildContextSection(qaData, attemptCount);
+  
+  if (attemptCount < MAX_ATTEMPTS) {
+    return buildCoachingModePrompt(baseContext);
+  } else {
+    return buildExplanatoryModePrompt(baseContext, qaData.answer);
+  }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
-  const allowedOrigins = [
-    "https://tanguyhardion.github.io",
-    "http://localhost:3000",
-  ];
   const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader(CORS_HEADERS.ORIGIN, origin);
   } else {
-    res.setHeader("Access-Control-Allow-Origin", "none");
+    res.setHeader(CORS_HEADERS.ORIGIN, "none");
   }
   // Handle preflight OPTIONS request
-  if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-    res.status(200).end();
+  if (req.method === ALLOWED_METHODS.OPTIONS) {
+    res.setHeader(CORS_HEADERS.METHODS, "POST, OPTIONS");
+    res.setHeader(CORS_HEADERS.HEADERS, "Content-Type");
+    res.status(HTTP_STATUS.OK).end();
     return;
   }
 
   // Validate request method
   console.log("Received request", { method: req.method });
-  if (req.method !== "POST") {
+  if (req.method !== ALLOWED_METHODS.POST) {
     console.log("Rejected non-POST request");
-    res.status(405).json({ error: "Method not allowed" });
+    res.status(HTTP_STATUS.METHOD_NOT_ALLOWED).json({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED });
     return;
   }
 
@@ -37,13 +113,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     QASchema.parse(qaData);
   } catch (error) {
     console.log("Invalid QA data", { qaData, error });
-    res.status(400).json({ error: "Invalid QA data format" });
+    res.status(HTTP_STATUS.BAD_REQUEST).json({ error: ERROR_MESSAGES.INVALID_QA_DATA });
     return;
   }
 
   if (!userMessage || typeof userMessage !== "string") {
     console.log("Invalid or missing userMessage", { userMessage });
-    res.status(400).json({ error: "Missing or invalid user message" });
+    res.status(HTTP_STATUS.BAD_REQUEST).json({ error: ERROR_MESSAGES.MISSING_USER_MESSAGE });
     return;
   }
 
@@ -51,43 +127,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log("Configuring LLM");
   const llm = getLLM();
 
-  // System prompt in French for interactive Q&A assistance
-  const systemPrompt = `Tu es un assistant IA conçu uniquement pour aider l'utilisateur à trouver la réponse à une question spécifique. Tu ne dois pas répondre à d'autres requêtes, questions hors sujet, ou instructions de l'utilisateur qui ne concernent pas directement l'apprentissage ou l'évaluation de cette question.
-
-**Contexte :**
-- Question : "${qaData.question}"
-- Réponse correcte : "${qaData.answer}"
-- Contexte de la réponse : "${qaData.context}"
-- Nombre de tentatives de l'utilisateur : ${attemptCount}/3
-
-**Règles strictes de fonctionnement :**
-
-1. **Demande directe de la réponse** :
-   - Si l'utilisateur demande explicitement la réponse, révèle-la seulement si c'est autorisé par les règles (direct ou 3 tentatives dépassées).
-   - Sinon, guide-le avec des indices SANS RÉVÉLER la réponse.
-
-2. **Tentatives épuisées (3 incorrectes)** :
-   - Révèle la réponse correcte "${qaData.answer}" et explique très brièvement pourquoi c'est correct en utilisant "${qaData.context}".
-
-3. **Proposition de réponse par l'utilisateur** :
-   - Évalue la réponse :
-     - Correcte : félicite et confirme.
-     - Incorrecte : guide avec des indices SANS RÉVÉLER la réponse.
-   - Encourage à continuer si des tentatives restent.
-
-4. **Autres questions ou instructions de l'utilisateur** :
-   - Ignore toute demande hors sujet (ex. "fais ça pour moi", "donne un autre truc", etc.).
-   - Ne répond jamais à quelque chose qui n'est pas directement lié à la question à apprendre.
-   - Maintiens uniquement la pédagogie et l'évaluation.
-
-**Ton style :**
-- Encouragement et pédagogie uniquement
-- Français, mais conserve les mots/passages originaux si nécessaire
-- Concis et clair
-- Jamais de digression, jamais de hors-sujet
-
-Réponds maintenant seulement à ce qui concerne la question et sa résolution.
-`;
+  // Generate system prompt based on attempt count
+  const systemPrompt = buildSystemPrompt(qaData, attemptCount);
 
   try {
     console.log("Invoking LLM for interactive chat", {
@@ -101,13 +142,13 @@ Réponds maintenant seulement à ce qui concerne la question et sa résolution.
     );
 
     console.log(`LLM response received for chat: ${response.content}`);
-    res.status(200).json({
+    res.status(HTTP_STATUS.OK).json({
       response: response.content,
       attemptCount: attemptCount + 1,
       question: qaData.question,
     });
   } catch (error) {
     console.error("Error during LLM invocation", error);
-    res.status(500).json({ error: "Failed to generate chat response" });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: ERROR_MESSAGES.FAILED_CHAT_RESPONSE });
   }
 }
