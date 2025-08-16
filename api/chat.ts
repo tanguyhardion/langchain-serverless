@@ -4,10 +4,13 @@ import { QASchema } from "../types/qa";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
-  const allowedOrigin = "https://tanguyhardion.github.io";
+  const allowedOrigins = [
+    "https://tanguyhardion.github.io",
+    "http://localhost:3000",
+  ];
   const origin = req.headers.origin;
-  if (origin === allowedOrigin) {
-    res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
   } else {
     res.setHeader("Access-Control-Allow-Origin", "none");
   }

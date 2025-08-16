@@ -1,10 +1,13 @@
 // Health check endpoint for serverless deployment
 export default function handler(req, res) {
   // CORS headers
-  const allowedOrigin = "https://tanguyhardion.github.io";
+  const allowedOrigins = [
+    "https://tanguyhardion.github.io",
+    "http://localhost:3000",
+  ];
   const origin = req.headers.origin;
-  if (origin === allowedOrigin) {
-    res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
   } else {
     res.setHeader("Access-Control-Allow-Origin", "none");
   }
