@@ -15,34 +15,38 @@ import {
  */
 async function extractWebpageText(url: string): Promise<string> {
   const response = await fetch(url);
-  
+
   if (!response.ok) {
-    throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Failed to fetch URL: ${response.status} ${response.statusText}`
+    );
   }
 
   const html = await response.text();
   const $ = cheerio.load(html);
 
   // Remove script and style elements
-  $('script, style, noscript, iframe, nav, footer, header, aside').remove();
-  
+  $("script, style, noscript, iframe, nav, footer, header, aside").remove();
+
   // Remove common non-content elements
-  $('.sidebar, .advertisement, .ads, .social-share, .comments, .related-posts').remove();
-  $('#sidebar, #ads, #comments, #social-share, #related-posts').remove();
-  
+  $(
+    ".sidebar, .advertisement, .ads, .social-share, .comments, .related-posts"
+  ).remove();
+  $("#sidebar, #ads, #comments, #social-share, #related-posts").remove();
+
   // Try to find main content areas first
-  let text = '';
+  let text = "";
   const contentSelectors = [
-    'main',
-    'article', 
+    "main",
+    "article",
     '[role="main"]',
-    '.main-content',
-    '.content',
-    '.post-content',
-    '.entry-content',
-    '.article-content'
+    ".main-content",
+    ".content",
+    ".post-content",
+    ".entry-content",
+    ".article-content",
   ];
-  
+
   // Look for main content containers
   for (const selector of contentSelectors) {
     const contentElement = $(selector);
@@ -51,16 +55,16 @@ async function extractWebpageText(url: string): Promise<string> {
       break;
     }
   }
-  
+
   // Fallback to body if no main content found
   if (!text) {
-    text = $('body').text();
+    text = $("body").text();
   }
-  
+
   // Clean up the text
   return text
-    .replace(/\s+/g, ' ')  // Replace multiple whitespace with single space
-    .replace(/\n\s*\n/g, '\n')  // Remove empty lines
+    .replace(/\s+/g, " ") // Replace multiple whitespace with single space
+    .replace(/\n\s*\n/g, "\n") // Remove empty lines
     .trim();
 }
 
@@ -75,6 +79,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Handle preflight OPTIONS request
   if (req.method === ALLOWED_METHODS.OPTIONS) {
+    res.setHeader(CORS_HEADERS.METHODS, "POST, OPTIONS");
+    res.setHeader(CORS_HEADERS.HEADERS, "Content-Type");
     res.status(HTTP_STATUS.OK).end();
     return;
   }
