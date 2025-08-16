@@ -1,7 +1,7 @@
 // Health check endpoint for serverless deployment
 export default function handler(req, res) {
   // CORS headers
-  const allowedOrigin = "https://tanguyhardion.github.io/qna-genius/";
+  const allowedOrigin = "https://tanguyhardion.github.io";
   const origin = req.headers.origin;
   if (origin === allowedOrigin) {
     res.setHeader("Access-Control-Allow-Origin", allowedOrigin);

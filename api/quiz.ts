@@ -4,7 +4,7 @@ import { QASchema, QAListObjectSchema } from "../types/qa";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
-  const allowedOrigin = "https://tanguyhardion.github.io/qna-genius/";
+  const allowedOrigin = "https://tanguyhardion.github.io";
   const origin = req.headers.origin;
   if (origin === allowedOrigin) {
     res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
