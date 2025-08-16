@@ -1,20 +1,23 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import { QASchema, QASchemaType } from "../types/qa";
 import { getLLM } from "../utils/llm";
-import { 
+import {
   MAX_ATTEMPTS,
   ALLOWED_ORIGINS,
   CORS_HEADERS,
   ALLOWED_METHODS,
   ALLOWED_REQUEST_HEADERS,
   HTTP_STATUS,
-  ERROR_MESSAGES 
+  ERROR_MESSAGES,
 } from "../consts";
 
 /**
  * Builds the context information section for the system prompt
  */
-function buildContextSection(qaData: QASchemaType, attemptCount: number): string {
+function buildContextSection(
+  qaData: QASchemaType,
+  attemptCount: number
+): string {
   return `**Contexte :**
 - Question : "${qaData.question}"
 - Réponse correcte : "${qaData.answer}"
@@ -49,7 +52,10 @@ ${baseContext}
  * Builds the explanatory mode prompt (for attempts >= 3)
  * In this mode, the AI can reveal and explain the correct answer
  */
-function buildExplanatoryModePrompt(baseContext: string, answer: string): string {
+function buildExplanatoryModePrompt(
+  baseContext: string,
+  answer: string
+): string {
   return `Tu es maintenant un assistant IA explicatif pour aider l'utilisateur à COMPRENDRE la réponse, la question et le contexte.
 
 ${baseContext}
@@ -67,14 +73,14 @@ ${baseContext}
 
 /**
  * Builds the complete system prompt based on QA data and attempt count
- * 
+ *
  * The system switches between two modes:
  * - Coaching mode (< 3 attempts): Guides user without revealing answer
  * - Explanatory mode (≥ 3 attempts): Can reveal and explain the correct answer
  */
 function buildSystemPrompt(qaData: QASchemaType, attemptCount: number): string {
   const baseContext = buildContextSection(qaData, attemptCount);
-  
+
   if (attemptCount < MAX_ATTEMPTS) {
     return buildCoachingModePrompt(baseContext);
   } else {
@@ -102,7 +108,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log("Received request", { method: req.method });
   if (req.method !== ALLOWED_METHODS.POST) {
     console.log("Rejected non-POST request");
-    res.status(HTTP_STATUS.METHOD_NOT_ALLOWED).json({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED });
+    res
+      .status(HTTP_STATUS.METHOD_NOT_ALLOWED)
+      .json({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED });
     return;
   }
 
@@ -113,13 +121,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     QASchema.parse(qaData);
   } catch (error) {
     console.log("Invalid QA data", { qaData, error });
-    res.status(HTTP_STATUS.BAD_REQUEST).json({ error: ERROR_MESSAGES.INVALID_QA_DATA });
+    res
+      .status(HTTP_STATUS.BAD_REQUEST)
+      .json({ error: ERROR_MESSAGES.INVALID_QA_DATA });
     return;
   }
 
   if (!userMessage || typeof userMessage !== "string") {
     console.log("Invalid or missing userMessage", { userMessage });
-    res.status(HTTP_STATUS.BAD_REQUEST).json({ error: ERROR_MESSAGES.MISSING_USER_MESSAGE });
+    res
+      .status(HTTP_STATUS.BAD_REQUEST)
+      .json({ error: ERROR_MESSAGES.MISSING_USER_MESSAGE });
     return;
   }
 
@@ -137,9 +149,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       userMessage: userMessage,
     });
 
-    const response = await llm.invoke(
-      `${systemPrompt}\n\nMessage de l'utilisateur: ${userMessage}`
-    );
+    const fullPrompt = `${systemPrompt}\n\nMessage de l'utilisateur: ${userMessage}`;
+
+    const response = await llm.invoke(fullPrompt);
 
     console.log(`LLM response received for chat: ${response.content}`);
     res.status(HTTP_STATUS.OK).json({
@@ -149,6 +161,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (error) {
     console.error("Error during LLM invocation", error);
-    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: ERROR_MESSAGES.FAILED_CHAT_RESPONSE });
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .json({ error: ERROR_MESSAGES.FAILED_CHAT_RESPONSE });
   }
 }

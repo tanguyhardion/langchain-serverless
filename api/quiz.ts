@@ -1,53 +1,17 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import { QAListObjectSchema } from "../types/qa";
 import { getLLM } from "../utils/llm";
-import { 
+import {
   ALLOWED_ORIGINS,
   CORS_HEADERS,
   ALLOWED_METHODS,
   ALLOWED_REQUEST_HEADERS,
   HTTP_STATUS,
-  ERROR_MESSAGES 
+  ERROR_MESSAGES,
 } from "../consts";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers
-  const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader(CORS_HEADERS.ORIGIN, origin);
-  } else {
-    res.setHeader(CORS_HEADERS.ORIGIN, "none");
-  }
-  res.setHeader(CORS_HEADERS.METHODS, "POST, OPTIONS");
-  res.setHeader(CORS_HEADERS.HEADERS, ALLOWED_REQUEST_HEADERS);
-  // Handle preflight OPTIONS request
-  if (req.method === ALLOWED_METHODS.OPTIONS) {
-    res.status(HTTP_STATUS.OK).end();
-    return;
-  }
-
-  // Validate request method
-  console.log("Received request", { method: req.method });
-  if (req.method !== ALLOWED_METHODS.POST) {
-    console.log("Rejected non-POST request");
-    res.status(HTTP_STATUS.METHOD_NOT_ALLOWED).json({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED });
-    return;
-  }
-
-  // Validate request body
-  const { articleInput } = req.body || {};
-  if (!articleInput || typeof articleInput !== "string") {
-    console.log("Invalid or missing articleInput", { articleInput });
-    res.status(HTTP_STATUS.BAD_REQUEST).json({ error: ERROR_MESSAGES.MISSING_ARTICLE_INPUT });
-    return;
-  }
-
-  // Configure LLM
-  console.log("Configuring LLM");
-  const llm = getLLM();
-
-  // System prompt to enforce Q&A list format and require context
-  const systemPrompt = `
+function buildSystemPrompt(): string {
+  return `
 Tu es un assistant IA spécialisé dans la création d'exercices de compréhension. Ton rôle est de transformer un article fourni en une série de questions-réponses pour tester la compréhension d'un utilisateur.
 
 **Instructions :**
@@ -69,6 +33,50 @@ Tu es un assistant IA spécialisé dans la création d'exercices de compréhensi
 * Si l'article parle de Paris : crée des questions comme "Qu'est-ce que Paris ?" ou "Pourquoi Paris est-elle célèbre ?", mais donne un passage **général sur la ville ou son contexte**, plutôt que la phrase exacte contenant la réponse.
 * Si l'article est dans une langue étrangère : toutes les questions sont en français, mais inclue 1 à 3 questions sur des mots ou phrases difficiles, avec le passage original correspondant.
 `;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS headers
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader(CORS_HEADERS.ORIGIN, origin);
+  } else {
+    res.setHeader(CORS_HEADERS.ORIGIN, "none");
+  }
+  res.setHeader(CORS_HEADERS.METHODS, "POST, OPTIONS");
+  res.setHeader(CORS_HEADERS.HEADERS, ALLOWED_REQUEST_HEADERS);
+  // Handle preflight OPTIONS request
+  if (req.method === ALLOWED_METHODS.OPTIONS) {
+    res.status(HTTP_STATUS.OK).end();
+    return;
+  }
+
+  // Validate request method
+  console.log("Received request", { method: req.method });
+  if (req.method !== ALLOWED_METHODS.POST) {
+    console.log("Rejected non-POST request");
+    res
+      .status(HTTP_STATUS.METHOD_NOT_ALLOWED)
+      .json({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED });
+    return;
+  }
+
+  // Validate request body
+  const { articleInput } = req.body || {};
+  if (!articleInput || typeof articleInput !== "string") {
+    console.log("Invalid or missing articleInput", { articleInput });
+    res
+      .status(HTTP_STATUS.BAD_REQUEST)
+      .json({ error: ERROR_MESSAGES.MISSING_ARTICLE_INPUT });
+    return;
+  }
+
+  // Configure LLM
+  console.log("Configuring LLM");
+  const llm = getLLM();
+
+  // System prompt to enforce Q&A list format and require context
+  const systemPrompt = buildSystemPrompt();
 
   // Combine system prompt and user prompt
   const fullPrompt = `${systemPrompt}\n\nArticle: ${articleInput}`;
@@ -92,6 +100,8 @@ Tu es un assistant IA spécialisé dans la création d'exercices de compréhensi
     res.status(HTTP_STATUS.OK).json(qaListObject);
   } catch (error) {
     console.error("Error during LLM invocation", error);
-    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: ERROR_MESSAGES.FAILED_QA_GENERATION });
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .json({ error: ERROR_MESSAGES.FAILED_QA_GENERATION });
   }
 }
