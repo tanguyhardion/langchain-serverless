@@ -1,5 +1,4 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
-// ...existing code...
 import { QASchema } from "../types/qa";
 import { getLLM } from "../utils/llm";
 
@@ -17,6 +16,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   // Handle preflight OPTIONS request
   if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
     res.status(200).end();
     return;
   }
