@@ -48,7 +48,7 @@ Tu es un assistant IA spécialisé dans la création d'exercices de compréhensi
 
    * Fournis **la question en français**.
    * Fournis **la réponse en français**.
-   * Fournis **le passage exact de l'article qui justifie la réponse**, dans la langue d'origine.
+   * Fournis **un extrait de l'article qui sert de contexte**, mais choisis un passage **relativement large ou général** (qui reste un **extrait** de l'article et non l'article en entier, et qui contient évidemment la réponse) plutôt qu'un passage ciblé donnant la réponse directement. L'objectif est que l'utilisateur doive réfléchir et chercher l'information.
 4. Parmi les 10 questions, inclue **1 à 3 questions sur la langue de l'article** : par exemple, la signification de mots ou phrases difficiles présents dans le texte, ou le temps/déclinaison de certains mots.
 5. Ne pose des questions que sur des informations réellement présentes dans l'article.
 6. Les questions sur la langue doivent mentionner le mot ou la phrase cible dans la langue originale et expliquer sa signification en français.
@@ -56,7 +56,7 @@ Tu es un assistant IA spécialisé dans la création d'exercices de compréhensi
 
 **Exemples :**
 
-* Si l'article parle de Paris : crée des questions comme "Qu'est-ce que Paris ?" ou "Pourquoi Paris est-elle célèbre ?" uniquement si ces informations apparaissent dans l'article, avec le passage original comme contexte.
+* Si l'article parle de Paris : crée des questions comme "Qu'est-ce que Paris ?" ou "Pourquoi Paris est-elle célèbre ?", mais donne un passage **général sur la ville ou son contexte**, plutôt que la phrase exacte contenant la réponse.
 * Si l'article est dans une langue étrangère : toutes les questions sont en français, mais inclue 1 à 3 questions sur des mots ou phrases difficiles, avec le passage original correspondant.
 `;
 
