@@ -4,9 +4,16 @@ import * as cheerio from "cheerio";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  const allowedOrigins = [
+    "https://tanguyhardion.github.io",
+    "http://localhost:3000",
+  ];
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  } else {
+    res.setHeader("Access-Control-Allow-Origin", "none");
+  }
   // Handle preflight OPTIONS request
   if (req.method === "OPTIONS") {
     res.status(200).end();
@@ -38,6 +45,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const text = $("body").text().replace(/\s+/g, " ").trim();
     res.status(200).json({ text });
   } catch (error) {
-    res.status(500).json({ error: "Error extracting text", details: String(error) });
+    res
+      .status(500)
+      .json({ error: "Error extracting text", details: String(error) });
   }
 }
