@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
-import { ChatOpenAI } from "@langchain/openai";
-import { QASchema, QAListObjectSchema } from "../types/qa";
+import { QAListObjectSchema } from "../types/qa";
+import { getLLM } from "../utils/llm";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
@@ -40,10 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Configure LLM
   console.log("Configuring LLM");
-  const llm = new ChatOpenAI({
-    model: "gpt-5-nano",
-    apiKey: process.env.OPENAI_API_KEY,
-  });
+  const llm = getLLM();
 
   // System prompt to enforce Q&A list format and require context
   const systemPrompt = `
