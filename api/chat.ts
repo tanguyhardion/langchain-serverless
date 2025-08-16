@@ -4,9 +4,13 @@ import { QASchema } from "../types/qa";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  const allowedOrigin = "https://tanguyhardion.github.io/qna-genius/";
+  const origin = req.headers.origin;
+  if (origin === allowedOrigin) {
+    res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+  } else {
+    res.setHeader("Access-Control-Allow-Origin", "none");
+  }
   // Handle preflight OPTIONS request
   if (req.method === "OPTIONS") {
     res.status(200).end();
