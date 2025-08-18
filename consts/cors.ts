@@ -3,6 +3,7 @@
  */
 export const ALLOWED_ORIGINS = [
   "https://tanguyhardion.github.io",
+  // "http://localhost:3000",
 ];
 
 export const CORS_HEADERS = {

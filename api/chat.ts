@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import { QASchema, QASchemaType } from "../types/qa";
 import { getLLM } from "../utils/llm";
+import { addLog } from "../utils/logger";
 import {
   MAX_ATTEMPTS,
   ALLOWED_ORIGINS,
@@ -106,8 +107,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Validate request method
   console.log("Received request", { method: req.method });
+  addLog("Received request", "info", { method: req.method });
   if (req.method !== ALLOWED_METHODS.POST) {
     console.log("Rejected non-POST request");
+    addLog("Rejected non-POST request", "warn", { method: req.method });
     res
       .status(HTTP_STATUS.METHOD_NOT_ALLOWED)
       .json({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED });
@@ -121,6 +124,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     QASchema.parse(qaData);
   } catch (error) {
     console.log("Invalid QA data", { qaData, error });
+    addLog("Invalid QA data", "error", { qaData, error: String(error) });
     res
       .status(HTTP_STATUS.BAD_REQUEST)
       .json({ error: ERROR_MESSAGES.INVALID_QA_DATA });
@@ -129,6 +133,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (!userMessage || typeof userMessage !== "string") {
     console.log("Invalid or missing userMessage", { userMessage });
+    addLog("Invalid or missing userMessage", "error", { userMessage });
     res
       .status(HTTP_STATUS.BAD_REQUEST)
       .json({ error: ERROR_MESSAGES.MISSING_USER_MESSAGE });
@@ -137,6 +142,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Configure LLM
   console.log("Configuring LLM");
+  addLog("Configuring LLM", "info");
   const llm = getLLM();
 
   // Generate system prompt based on attempt count
@@ -148,12 +154,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       attemptCount,
       userMessage: userMessage,
     });
+    addLog("Invoking LLM for interactive chat", "info", {
+      question: qaData.question,
+      attemptCount,
+      userMessage: userMessage,
+    });
 
     const fullPrompt = `${systemPrompt}\n\nMessage de l'utilisateur: ${userMessage}`;
 
     const response = await llm.invoke(fullPrompt);
 
     console.log(`LLM response received for chat: ${response.content}`);
+    addLog("LLM response received for chat", "info", { responseContent: response.content });
     res.status(HTTP_STATUS.OK).json({
       response: response.content,
       attemptCount: attemptCount + 1,
@@ -161,6 +173,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (error) {
     console.error("Error during LLM invocation", error);
+    addLog("Error during LLM invocation", "error", { error: String(error) });
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .json({ error: ERROR_MESSAGES.FAILED_CHAT_RESPONSE });

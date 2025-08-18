@@ -1,5 +1,6 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import * as cheerio from "cheerio";
+import { addLog } from "../utils/logger";
 import {
   ALLOWED_ORIGINS,
   CORS_HEADERS,
@@ -86,7 +87,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Validate request method
+  console.log("Received request", { method: req.method });
+  addLog("Received request", "info", { method: req.method });
   if (req.method !== ALLOWED_METHODS.POST) {
+    console.log("Rejected non-POST request");
+    addLog("Rejected non-POST request", "warn", { method: req.method });
     res
       .status(HTTP_STATUS.METHOD_NOT_ALLOWED)
       .json({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED });
@@ -96,6 +101,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Validate request body
   const { url } = req.body || {};
   if (!url || typeof url !== "string") {
+    console.log("Invalid or missing url", { url });
+    addLog("Invalid or missing url", "error", { url });
     res
       .status(HTTP_STATUS.BAD_REQUEST)
       .json({ error: ERROR_MESSAGES.MISSING_URL });
@@ -103,9 +110,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    console.log("Extracting text from URL", { url });
+    addLog("Extracting text from URL", "info", { url });
     const text = await extractWebpageText(url);
+    console.log("Text extraction completed", { textLength: text.length });
+    addLog("Text extraction completed", "info", { textLength: text.length, url });
     res.status(HTTP_STATUS.OK).json({ text });
   } catch (error) {
+    console.error("Error during text extraction", error);
+    addLog("Error during text extraction", "error", { error: String(error), url });
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       error: ERROR_MESSAGES.EXTRACT_TEXT_ERROR,
       details: String(error),

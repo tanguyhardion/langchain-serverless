@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import { QAListObjectSchema } from "../types/qa";
 import { getLLM } from "../utils/llm";
+import { addLog } from "../utils/logger";
 import {
   ALLOWED_ORIGINS,
   CORS_HEADERS,
@@ -53,8 +54,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Validate request method
   console.log("Received request", { method: req.method });
+  addLog("Received request", "info", { method: req.method });
   if (req.method !== ALLOWED_METHODS.POST) {
     console.log("Rejected non-POST request");
+    addLog("Rejected non-POST request", "warn", { method: req.method });
     res
       .status(HTTP_STATUS.METHOD_NOT_ALLOWED)
       .json({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED });
@@ -65,6 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { articleInput } = req.body || {};
   if (!articleInput || typeof articleInput !== "string") {
     console.log("Invalid or missing articleInput", { articleInput });
+    addLog("Invalid or missing articleInput", "error", { articleInputLength: articleInput?.length || 0 });
     res
       .status(HTTP_STATUS.BAD_REQUEST)
       .json({ error: ERROR_MESSAGES.MISSING_ARTICLE_INPUT });
@@ -73,6 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Configure LLM
   console.log("Configuring LLM");
+  addLog("Configuring LLM", "info");
   const llm = getLLM();
 
   // System prompt to enforce Q&A list format and require context
@@ -90,6 +95,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log(
       `Invoking LLM with prompt and article: ${articleInput.slice(0, 500)}...`
     );
+    addLog("Invoking LLM with prompt and article", "info", { 
+      articleInputLength: articleInput.length,
+      articlePreview: articleInput.slice(0, 500)
+    });
     qaListObject = await llm
       .withStructuredOutput(QAListObjectSchema)
       .invoke(fullPrompt);
@@ -97,9 +106,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log("LLM response received", {
       qaCount: qaListObject?.items?.length,
     });
+    addLog("LLM response received", "info", {
+      qaCount: qaListObject?.items?.length,
+    });
     res.status(HTTP_STATUS.OK).json(qaListObject);
   } catch (error) {
     console.error("Error during LLM invocation", error);
+    addLog("Error during LLM invocation", "error", { error: String(error) });
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .json({ error: ERROR_MESSAGES.FAILED_QA_GENERATION });
