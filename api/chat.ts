@@ -2,15 +2,8 @@ import { VercelRequest, VercelResponse } from "@vercel/node";
 import { QASchema, QASchemaType } from "../types/qa";
 import { getLLM } from "../utils/llm";
 import { addLog } from "../utils/logger";
-import {
-  MAX_ATTEMPTS,
-  ALLOWED_ORIGINS,
-  CORS_HEADERS,
-  ALLOWED_METHODS,
-  ALLOWED_REQUEST_HEADERS,
-  HTTP_STATUS,
-  ERROR_MESSAGES,
-} from "../consts";
+import { handleCorsAndMethod } from "../utils/cors";
+import { MAX_ATTEMPTS, HTTP_STATUS, ERROR_MESSAGES } from "../consts";
 
 /**
  * Builds the context information section for the system prompt
@@ -90,30 +83,8 @@ function buildSystemPrompt(qaData: QASchemaType, attemptCount: number): string {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers
-  const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader(CORS_HEADERS.ORIGIN, origin);
-  } else {
-    res.setHeader(CORS_HEADERS.ORIGIN, "none");
-  }
-  // Handle preflight OPTIONS request
-  if (req.method === ALLOWED_METHODS.OPTIONS) {
-    res.setHeader(CORS_HEADERS.METHODS, "POST, OPTIONS");
-    res.setHeader(CORS_HEADERS.HEADERS, "Content-Type");
-    res.status(HTTP_STATUS.OK).end();
-    return;
-  }
-
-  // Validate request method
-  console.log("Received request", { method: req.method });
-  addLog("Received request", "info", { method: req.method });
-  if (req.method !== ALLOWED_METHODS.POST) {
-    console.log("Rejected non-POST request");
-    addLog("Rejected non-POST request", "warn", { method: req.method });
-    res
-      .status(HTTP_STATUS.METHOD_NOT_ALLOWED)
-      .json({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED });
+  // Handle CORS and method validation
+  if (!handleCorsAndMethod(req, res, "POST")) {
     return;
   }
 
@@ -165,7 +136,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const response = await llm.invoke(fullPrompt);
 
     console.log(`LLM response received for chat: ${response.content}`);
-    addLog("LLM response received for chat", "info", { responseContent: response.content });
+    addLog("LLM response received for chat", "info", {
+      responseContent: response.content,
+    });
     res.status(HTTP_STATUS.OK).json({
       response: response.content,
       attemptCount: attemptCount + 1,

@@ -1,13 +1,8 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import * as cheerio from "cheerio";
 import { addLog } from "../utils/logger";
-import {
-  ALLOWED_ORIGINS,
-  CORS_HEADERS,
-  ALLOWED_METHODS,
-  HTTP_STATUS,
-  ERROR_MESSAGES,
-} from "../consts";
+import { handleCorsAndMethod } from "../utils/cors";
+import { HTTP_STATUS, ERROR_MESSAGES } from "../consts";
 
 /**
  * Extracts clean text content from a webpage URL
@@ -70,31 +65,8 @@ async function extractWebpageText(url: string): Promise<string> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers
-  const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader(CORS_HEADERS.ORIGIN, origin);
-  } else {
-    res.setHeader(CORS_HEADERS.ORIGIN, "none");
-  }
-
-  // Handle preflight OPTIONS request
-  if (req.method === ALLOWED_METHODS.OPTIONS) {
-    res.setHeader(CORS_HEADERS.METHODS, "POST, OPTIONS");
-    res.setHeader(CORS_HEADERS.HEADERS, "Content-Type");
-    res.status(HTTP_STATUS.OK).end();
-    return;
-  }
-
-  // Validate request method
-  console.log("Received request", { method: req.method });
-  addLog("Received request", "info", { method: req.method });
-  if (req.method !== ALLOWED_METHODS.POST) {
-    console.log("Rejected non-POST request");
-    addLog("Rejected non-POST request", "warn", { method: req.method });
-    res
-      .status(HTTP_STATUS.METHOD_NOT_ALLOWED)
-      .json({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED });
+  // Handle CORS and method validation
+  if (!handleCorsAndMethod(req, res, "POST")) {
     return;
   }
 
@@ -114,11 +86,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     addLog("Extracting text from URL", "info", { url });
     const text = await extractWebpageText(url);
     console.log("Text extraction completed", { textLength: text.length });
-    addLog("Text extraction completed", "info", { textLength: text.length, url });
+    addLog("Text extraction completed", "info", {
+      textLength: text.length,
+      url,
+    });
     res.status(HTTP_STATUS.OK).json({ text });
   } catch (error) {
     console.error("Error during text extraction", error);
-    addLog("Error during text extraction", "error", { error: String(error), url });
+    addLog("Error during text extraction", "error", {
+      error: String(error),
+      url,
+    });
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       error: ERROR_MESSAGES.EXTRACT_TEXT_ERROR,
       details: String(error),

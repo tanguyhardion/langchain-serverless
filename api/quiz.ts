@@ -2,14 +2,8 @@ import { VercelRequest, VercelResponse } from "@vercel/node";
 import { QAListObjectSchema } from "../types/qa";
 import { getLLM } from "../utils/llm";
 import { addLog } from "../utils/logger";
-import {
-  ALLOWED_ORIGINS,
-  CORS_HEADERS,
-  ALLOWED_METHODS,
-  ALLOWED_REQUEST_HEADERS,
-  HTTP_STATUS,
-  ERROR_MESSAGES,
-} from "../consts";
+import { handleCorsAndMethod } from "../utils/cors";
+import { HTTP_STATUS, ERROR_MESSAGES } from "../consts";
 
 function buildSystemPrompt(): string {
   return `
@@ -37,30 +31,8 @@ Tu es un assistant IA spécialisé dans la création d'exercices de compréhensi
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers
-  const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader(CORS_HEADERS.ORIGIN, origin);
-  } else {
-    res.setHeader(CORS_HEADERS.ORIGIN, "none");
-  }
-  res.setHeader(CORS_HEADERS.METHODS, "POST, OPTIONS");
-  res.setHeader(CORS_HEADERS.HEADERS, ALLOWED_REQUEST_HEADERS);
-  // Handle preflight OPTIONS request
-  if (req.method === ALLOWED_METHODS.OPTIONS) {
-    res.status(HTTP_STATUS.OK).end();
-    return;
-  }
-
-  // Validate request method
-  console.log("Received request", { method: req.method });
-  addLog("Received request", "info", { method: req.method });
-  if (req.method !== ALLOWED_METHODS.POST) {
-    console.log("Rejected non-POST request");
-    addLog("Rejected non-POST request", "warn", { method: req.method });
-    res
-      .status(HTTP_STATUS.METHOD_NOT_ALLOWED)
-      .json({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED });
+  // Handle CORS and method validation
+  if (!handleCorsAndMethod(req, res, "POST")) {
     return;
   }
 
@@ -68,7 +40,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { articleInput } = req.body || {};
   if (!articleInput || typeof articleInput !== "string") {
     console.log("Invalid or missing articleInput", { articleInput });
-    addLog("Invalid or missing articleInput", "error", { articleInputLength: articleInput?.length || 0 });
+    addLog("Invalid or missing articleInput", "error", {
+      articleInputLength: articleInput?.length || 0,
+    });
     res
       .status(HTTP_STATUS.BAD_REQUEST)
       .json({ error: ERROR_MESSAGES.MISSING_ARTICLE_INPUT });
@@ -95,9 +69,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log(
       `Invoking LLM with prompt and article: ${articleInput.slice(0, 500)}...`
     );
-    addLog("Invoking LLM with prompt and article", "info", { 
+    addLog("Invoking LLM with prompt and article", "info", {
       articleInputLength: articleInput.length,
-      articlePreview: articleInput.slice(0, 500)
+      articlePreview: articleInput.slice(0, 500),
     });
     qaListObject = await llm
       .withStructuredOutput(QAListObjectSchema)
