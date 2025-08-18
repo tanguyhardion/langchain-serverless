@@ -21,7 +21,7 @@ export async function addLog(
   try {
     const now = new Date();
     const date = now.toISOString().split("T")[0]; // 2025-08-18
-    const time = now.toTimeString().split(" ")[0]; // 22:50:12
+    const time = now.toTimeString().split(" ")[0] + "." + now.getMilliseconds(); // 22:50:12.000
 
     const { error } = await supabase.from("logs").insert([
       {
