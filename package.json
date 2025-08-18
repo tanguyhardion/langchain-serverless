@@ -1,5 +1,4 @@
 {
-  "type": "module",
   "dependencies": {
     "@langchain/openai": "^0.6.7",
     "@supabase/supabase-js": "^2.55.0",
