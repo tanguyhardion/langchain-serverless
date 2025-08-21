@@ -3,7 +3,9 @@ import { z } from "zod";
 export const QASchema = z.object({
   question: z.string(),
   answer: z.string(),
-  context: z.string(),
+  contextLarge: z.string(),
+  contextMedium: z.string(),
+  contextSmall: z.string(),
 });
 
 export const QAListObjectSchema = z.object({

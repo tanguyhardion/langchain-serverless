@@ -17,16 +17,24 @@ Tu es un assistant IA spécialisé dans la création d'exercices de compréhensi
 
    * Fournis **la question en français**.
    * Fournis **la réponse en français**.
-   * Fournis **un extrait de l'article qui sert de contexte**, mais choisis un passage **assez large et général**, plusieurs paragraphes. L'objectif est que l'utilisateur doive réfléchir et chercher l'information.
+   * Fournis **trois extraits de contexte imbriqués** qui contiennent tous la réponse :
+     - **contextLarge** : Un passage large et général de plusieurs paragraphes qui contient la réponse
+     - **contextMedium** : Un passage plus petit (quelques phrases) qui contient encore la réponse et qui est inclus dans contextLarge
+     - **contextSmall** : Un seul paragraphe concis qui contient la réponse et qui est inclus dans contextMedium
+   * L'objectif est que l'utilisateur doive réfléchir et chercher l'information à différents niveaux de granularité.
 4. Parmi les 10 questions, inclue **1 à 3 questions sur la langue de l'article** : par exemple, la signification de mots ou phrases difficiles présents dans le texte, ou le temps/déclinaison de certains mots.
 5. Ne pose des questions que sur des informations réellement présentes dans l'article.
 6. Les questions sur la langue doivent mentionner le mot ou la phrase cible dans la langue originale et expliquer sa signification en français.
 7. Les passages cités doivent toujours rester dans la langue originale de l'article.
+8. **Important** : Assure-toi que contextSmall est contenu dans contextMedium, et que contextMedium est contenu dans contextLarge pour créer une hiérarchie imbriquée.
 
-**Exemples :**
+**Exemple :**
 
-* Si l'article parle de Paris : crée des questions comme "Qu'est-ce que Paris ?" ou "Pourquoi Paris est-elle célèbre ?", mais donne un passage **général sur la ville ou son contexte**, plutôt que la phrase exacte contenant la réponse.
-* Si l'article est dans une langue étrangère : toutes les questions sont en français, mais inclue 1 à 3 questions sur des mots ou phrases difficiles, avec le passage original correspondant.
+* Si l'article parle de Paris : crée des questions comme "Qu'est-ce que Paris ?" ou "Pourquoi Paris est-elle célèbre ?", mais donne :
+  - contextLarge : plusieurs paragraphes généraux sur la ville et son histoire
+  - contextMedium : quelques phrases spécifiques sur Paris
+  - contextSmall : une phrase concise qui contient directement la réponse
+* Si l'article est dans une langue étrangère : toutes les questions sont en français, mais inclue 1 à 3 questions sur des mots ou phrases difficiles, avec les trois niveaux de contexte correspondants.
 `;
 }
 
@@ -62,7 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Use withStructuredOutput to get structured QA list as an object
   let qaListObject: {
-    items: { question: string; answer: string; context: string }[];
+    items: { question: string; answer: string; contextLarge: string; contextMedium: string; contextSmall: string }[];
   };
 
   try {
