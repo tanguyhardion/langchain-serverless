@@ -15,7 +15,9 @@ function buildContextSection(
   return `**Contexte :**
 - Question : "${qaData.question}"
 - Réponse correcte : "${qaData.answer}"
-- Contexte de la réponse : "${qaData.context}"
+- Contexte large : "${qaData.contextLarge}"
+- Contexte moyen : "${qaData.contextMedium}"
+- Contexte concis : "${qaData.contextSmall}"
 - Nombre de tentatives de l'utilisateur : ${attemptCount}/${MAX_ATTEMPTS}`;
 }
 
@@ -31,7 +33,10 @@ ${baseContext}
 **Mode actuel (tentatives < ${MAX_ATTEMPTS}) :**
 1. Ne RÉVÈLE JAMAIS la réponse, même si l'utilisateur la demande explicitement.
 2. Si l'utilisateur insiste pour avoir la réponse, dis-lui simplement qu'il peut cliquer sur le bouton "Afficher la réponse" situé en dessous.
-3. Donne des indices progressifs, pose des questions guidées et aide à raisonner, sans donner la réponse.
+3. Donne des indices progressifs en utilisant les différents niveaux de contexte :
+   - Commence par des indices basés sur le contexte large
+   - Si nécessaire, utilise le contexte moyen pour des indices plus précis
+   - En dernier recours, utilise le contexte concis pour guider sans révéler
 4. Si l'utilisateur propose une réponse :
    - Si elle est correcte, félicite et confirme.
    - Sinon, explique brièvement ce qui cloche et redirige avec des indices sans révéler la solution.
@@ -56,10 +61,14 @@ ${baseContext}
 
 **Mode actuel (≥ ${MAX_ATTEMPTS} tentatives) :**
 1. Tu peux révéler la réponse correcte : "${answer}".
-2. Explique pourquoi c'est la bonne réponse en t'appuyant sur le contexte fourni.
-3. Propose une explication structurée (raisonnement, repérage d'indices dans le contexte, pièges fréquents).
-4. Réponds aux questions de clarification et donne des exemples courts si utile.
-5. Reste centré sur cette question uniquement (pas de hors-sujet).
+2. Explique pourquoi c'est la bonne réponse en t'appuyant sur les contextes fournis.
+3. Utilise les trois niveaux de contexte pour une explication structurée :
+   - Commence par situer la réponse dans le contexte large
+   - Précise avec le contexte moyen
+   - Finalise avec le contexte concis qui contient directement la réponse
+4. Propose une explication structurée (raisonnement, repérage d'indices dans les contextes, pièges fréquents).
+5. Réponds aux questions de clarification et donne des exemples courts si utile.
+6. Reste centré sur cette question uniquement (pas de hors-sujet).
 
 **Style :**
 - Pédagogique, clair, concis, en français.`;
