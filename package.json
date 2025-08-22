@@ -4,10 +4,7 @@
   "description": "A minimal serverless API using LangChain for chat and quiz endpoints",
   "scripts": {
     "dev": "vercel dev",
-    "build": "tsc --noEmit",
-    "deploy": "vercel --prod",
-    "lint": "tsc --noEmit --strict",
-    "clean": "del-cli node_modules .vercel .next"
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@langchain/openai": "^0.6.7",
