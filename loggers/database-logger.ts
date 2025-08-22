@@ -13,7 +13,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
  * @param level - The log level (info, error, warn, debug)
  * @param metadata - Additional metadata to include with the log
  */
-export async function addLog(
+export async function insertDatabaseLog(
   message: string,
   level: "info" | "error" | "warn" | "debug" = "info",
   metadata?: Record<string, any>

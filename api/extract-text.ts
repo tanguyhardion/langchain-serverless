@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import * as cheerio from "cheerio";
-import { addLog } from "../loggers";
+import { insertDatabaseLog } from "../loggers/database-logger";
 import { handleCorsAndMethod } from "../utils/cors";
 import { HTTP_STATUS, ERROR_MESSAGES } from "../consts";
 
@@ -74,7 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { url } = req.body || {};
   if (!url || typeof url !== "string") {
     console.log("Invalid or missing url", { url });
-    addLog("Invalid or missing url", "error", { url });
+    insertDatabaseLog("Invalid or missing url", "error", { url });
     res
       .status(HTTP_STATUS.BAD_REQUEST)
       .json({ error: ERROR_MESSAGES.MISSING_URL });
@@ -83,17 +83,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     console.log("Extracting text from URL", { url });
-    addLog("Extracting text from URL", "info", { url });
+    insertDatabaseLog("Extracting text from URL", "info", { url });
     const text = await extractWebpageText(url);
     console.log("Text extraction completed", { textLength: text.length });
-    addLog("Text extraction completed", "info", {
+    insertDatabaseLog("Text extraction completed", "info", {
       textLength: text.length,
       url,
     });
     res.status(HTTP_STATUS.OK).json({ text });
   } catch (error) {
     console.error("Error during text extraction", error);
-    addLog("Error during text extraction", "error", {
+    insertDatabaseLog("Error during text extraction", "error", {
       error: String(error),
       url,
     });

@@ -1,22 +1,74 @@
 # LangChain Serverless API
 
-A minimal serverless API using LangChain for chat and quiz endpoints.
+Minimal serverless API for chat, quiz, and text extraction using LangChain.
 
-## Endpoints
+## Install
 
-- `/api/chat.ts` — Chat API
-- `/api/quiz.ts` — Quiz API
-- `/api/health.ts` — Health check
+```cmd
+npm install
+```
 
 ## Usage
 
-1. Install dependencies:
-   ```cmd
-   npm install
-   ```
-2. Start the server (see your framework's instructions).
+Set up your environment variables in `.env.local` (see `.env.example`).
 
-## Project Structure
+Run locally:
 
-- `api/` — API route handlers
-- `types/` — Type definitions
+```cmd
+npm run dev
+```
+
+Deploy:
+
+```cmd
+npm run deploy
+```
+
+## Endpoints
+
+- `/api/chat` — Chat
+- `/api/quiz` — Quiz from article
+- `/api/extract-text` — Extract text from URL
+- `/api/health` — Health check
+
+```json
+{
+  "qaData": {
+    "question": "What is the capital of France?",
+    "answer": "Paris",
+    "contextLarge": "...",
+    "contextMedium": "...",
+    "contextSmall": "..."
+  },
+  "userMessage": "I think it's London?",
+  "attemptCount": 1
+}
+```
+
+### POST `/api/quiz`
+
+Generates structured Q&A pairs from article content.
+
+**Request Body:**
+
+```json
+{
+  "articleInput": "Your article text here..."
+}
+```
+
+### POST `/api/extract-text`
+
+Extracts clean text from web pages.
+
+**Request Body:**
+
+```json
+{
+  "url": "https://example.com/article"
+}
+```
+
+### GET `/api/health`
+
+Returns basic health status.

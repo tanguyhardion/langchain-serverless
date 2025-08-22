@@ -1,7 +1,8 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import { QAListObjectSchema } from "../types/qa";
 import { getLLM } from "../utils/llm";
-import { addLog } from "../loggers";
+import { insertDatabaseLog } from "../loggers/database-logger";
+import { sendLLMCallEmail } from "../loggers/mail-logger";
 import { handleCorsAndMethod } from "../utils/cors";
 import { HTTP_STATUS, ERROR_MESSAGES } from "../consts";
 
@@ -48,7 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { articleInput } = req.body || {};
   if (!articleInput || typeof articleInput !== "string") {
     console.log("Invalid or missing articleInput", { articleInput });
-    addLog("Invalid or missing articleInput", "error", {
+    insertDatabaseLog("Invalid or missing articleInput", "error", {
       articleInputLength: articleInput?.length || 0,
     });
     res
@@ -59,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Configure LLM
   console.log("Configuring LLM");
-  addLog("Configuring LLM", "info");
+  insertDatabaseLog("Configuring LLM", "info");
   const llm = getLLM();
 
   // System prompt to enforce Q&A list format and require context
@@ -77,10 +78,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log(
       `Invoking LLM with prompt and article: ${articleInput.slice(0, 500)}...`
     );
-    addLog("Invoking LLM with prompt and article", "info", {
+    insertDatabaseLog("Invoking LLM with prompt and article", "info", {
       articleInputLength: articleInput.length,
       articlePreview: articleInput.slice(0, 500),
     });
+    
+    // Send email notification that LLM is being called
+    await sendLLMCallEmail("invoke", {
+      articleInputLength: articleInput.length,
+      articlePreview: articleInput.slice(0, 500),
+      prompt: systemPrompt
+    });
+    
     qaListObject = await llm
       .withStructuredOutput(QAListObjectSchema)
       .invoke(fullPrompt);
@@ -88,13 +97,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log("LLM response received", {
       qaCount: qaListObject?.items?.length,
     });
-    addLog("LLM response received", "info", {
+    insertDatabaseLog("LLM response received", "info", {
       qaCount: qaListObject?.items?.length,
     });
+    
+    // Send email notification that LLM returned data
+    await sendLLMCallEmail("response", undefined, {
+      qaCount: qaListObject?.items?.length,
+      firstQuestion: qaListObject?.items?.[0]?.question
+    });
+    
     res.status(HTTP_STATUS.OK).json(qaListObject);
   } catch (error) {
     console.error("Error during LLM invocation", error);
-    addLog("Error during LLM invocation", "error", { error: String(error) });
+    insertDatabaseLog("Error during LLM invocation", "error", { error: String(error) });
+    
+    // Send email notification that LLM call failed
+    await sendLLMCallEmail("error", {
+      articleInputLength: articleInput.length
+    }, undefined, { error: String(error) });
+    
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .json({ error: ERROR_MESSAGES.FAILED_QA_GENERATION });

@@ -1,10 +1,19 @@
 {
+  "name": "langchain-serverless",
+  "version": "1.0.0",
+  "description": "A minimal serverless API using LangChain for chat and quiz endpoints",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "tsc --noEmit",
+    "deploy": "vercel --prod",
+    "lint": "tsc --noEmit --strict",
+    "clean": "del-cli node_modules .vercel .next"
+  },
   "dependencies": {
     "@langchain/openai": "^0.6.7",
     "@supabase/supabase-js": "^2.55.0",
     "cheerio": "^1.1.2",
     "langchain": "^0.3.30",
-    "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.5",
     "zod": "^3.25.76"
   },
