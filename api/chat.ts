@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import { QASchema, QASchemaType } from "../types/qa";
 import { getLLM } from "../utils/llm";
-import { addLog } from "../utils/logger";
+import { addLog } from "../loggers";
 import { handleCorsAndMethod } from "../utils/cors";
 import { MAX_ATTEMPTS, HTTP_STATUS, ERROR_MESSAGES } from "../consts";
 

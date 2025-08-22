@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import * as cheerio from "cheerio";
-import { addLog } from "../utils/logger";
+import { addLog } from "../loggers";
 import { handleCorsAndMethod } from "../utils/cors";
 import { HTTP_STATUS, ERROR_MESSAGES } from "../consts";
 
