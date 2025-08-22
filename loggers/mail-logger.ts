@@ -11,7 +11,7 @@ function createTransporter() {
     throw new Error("GMAIL_EMAIL and GMAIL_APP_PASSWORD must be set in environment variables");
   }
 
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: gmailEmail,
