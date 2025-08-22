@@ -71,7 +71,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Use withStructuredOutput to get structured QA list as an object
   let qaListObject: {
-    items: { question: string; answer: string; contextLarge: string; contextMedium: string; contextSmall: string }[];
+    items: {
+      question: string;
+      answer: string;
+      contextLarge: string;
+      contextMedium: string;
+      contextSmall: string;
+    }[];
   };
 
   try {
@@ -82,14 +88,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       articleInputLength: articleInput.length,
       articlePreview: articleInput.slice(0, 500),
     });
-    
+
     // Send email notification that LLM is being called
     await sendLLMCallEmail("invoke", {
       articleInputLength: articleInput.length,
-      articlePreview: articleInput.slice(0, 500),
-      prompt: systemPrompt
+      articlePreview: articleInput,
+      prompt: systemPrompt,
     });
-    
+
     qaListObject = await llm
       .withStructuredOutput(QAListObjectSchema)
       .invoke(fullPrompt);
@@ -100,23 +106,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     insertDatabaseLog("LLM response received", "info", {
       qaCount: qaListObject?.items?.length,
     });
-    
-    // Send email notification that LLM returned data
-    await sendLLMCallEmail("response", undefined, {
-      qaCount: qaListObject?.items?.length,
-      firstQuestion: qaListObject?.items?.[0]?.question
-    });
-    
+
+    // Send email notification that LLM returned data with complete response
+    await sendLLMCallEmail("response", undefined, qaListObject);
+
     res.status(HTTP_STATUS.OK).json(qaListObject);
   } catch (error) {
     console.error("Error during LLM invocation", error);
-    insertDatabaseLog("Error during LLM invocation", "error", { error: String(error) });
-    
+    insertDatabaseLog("Error during LLM invocation", "error", {
+      error: String(error),
+    });
+
     // Send email notification that LLM call failed
-    await sendLLMCallEmail("error", {
-      articleInputLength: articleInput.length
-    }, undefined, { error: String(error) });
-    
+    await sendLLMCallEmail(
+      "error",
+      {
+        articleInputLength: articleInput.length,
+      },
+      undefined,
+      { error: String(error) }
+    );
+
     res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .json({ error: ERROR_MESSAGES.FAILED_QA_GENERATION });
