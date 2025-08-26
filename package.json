@@ -1,5 +1,5 @@
 {
-  "name": "langchain-serverless",
+  "name": "qna-genius-backend",
   "version": "1.0.0",
   "description": "A minimal serverless API using LangChain for chat and quiz endpoints",
   "dependencies": {
